@@ -61,5 +61,7 @@ func main() {
 }
 
 func handle(w http.ResponseWriter, req *http.Request) {
-	fmt.Fprintf(w, val)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprint(w, val)
 }
