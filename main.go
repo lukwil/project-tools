@@ -17,7 +17,6 @@ import (
 var val string
 
 func main() {
-
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file")
@@ -28,9 +27,10 @@ func main() {
 	//clientID := os.Getenv("KAFKA_CLIENT_ID")
 	user := os.Getenv("KAFKA_USER")
 	password := os.Getenv("KAFKA_PASSWORD")
+	httpAddress := os.Getenv("HTTP_SERVE_ADDRESS")
 
 	http.HandleFunc("/", handle)
-	go http.ListenAndServe(":8090", nil)
+	go http.ListenAndServe(httpAddress, nil)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -47,15 +47,17 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer conn.Close()
+	log.Println("Application successfully started...")
 
 	for {
 		msg, err := conn.ReadMessage(1e6) // Read max 1MB
 		if err != nil {
-			break
+			log.Fatal(err)
 		}
 		val = string(msg.Value)
 	}
-	conn.Close()
+
 }
 
 func handle(w http.ResponseWriter, req *http.Request) {
