@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/joho/godotenv"
 
@@ -24,7 +23,7 @@ func main() {
 
 	server := os.Getenv("KAFKA_SERVER")
 	topic := os.Getenv("KAFKA_TOPIC")
-	//clientID := os.Getenv("KAFKA_CLIENT_ID")
+	clientID := os.Getenv("KAFKA_CLIENT_ID")
 	user := os.Getenv("KAFKA_USER")
 	password := os.Getenv("KAFKA_PASSWORD")
 	httpAddress := os.Getenv("HTTP_SERVE_ADDRESS")
@@ -32,8 +31,7 @@ func main() {
 	http.HandleFunc("/", handle)
 	go http.ListenAndServe(httpAddress, nil)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx := context.Background()
 
 	sasl := plain.Mechanism{
 		Username: user,
@@ -41,23 +39,26 @@ func main() {
 	}
 
 	d := kafka.Dialer{
+		ClientID:      clientID,
 		SASLMechanism: sasl,
 	}
-	conn, err := d.DialLeader(ctx, "tcp", server, topic, 0)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer conn.Close()
+	reader := kafka.NewReader(kafka.ReaderConfig{
+		Brokers:     []string{server},
+		Topic:       topic,
+		StartOffset: kafka.LastOffset,
+		Dialer:      &d,
+		Logger:      log.New(os.Stderr, "kafka ", log.LstdFlags),
+	})
+
 	log.Println("Application successfully started...")
 
 	for {
-		msg, err := conn.ReadMessage(1e6) // Read max 1MB
+		msg, err := reader.FetchMessage(ctx)
 		if err != nil {
 			log.Fatal(err)
 		}
 		val = string(msg.Value)
 	}
-
 }
 
 func handle(w http.ResponseWriter, req *http.Request) {
