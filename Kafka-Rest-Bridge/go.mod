@@ -1,4 +1,4 @@
-module github.com/lukwil/kafka-rest
+module github.com/lukwil/project-tools/Kafka-Rest-Bridge
 
 go 1.13
 
